@@ -1,0 +1,91 @@
+.home-container {
+  display: flex;
+  padding: 20px;
+  padding-left: 100px; /* 调整左侧留出空间 */
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  margin-right: 50px; /* 在右侧留出空间 */
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start; /* 改为靠顶部对齐 */
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 600px;
+  background-color: #f9f9f9;
+  margin-bottom: 20px; /* 在底部留出空间 */
+}
+
+.profile-info {
+  flex-grow: 1;
+  margin-right: 20px;
+}
+
+.profile-info p {
+  margin: 20px 0; /* 增加上下间距 */
+}
+
+.input-field {
+  margin-left: 10px;
+  padding: 5px;
+  border: none; /* 移除边框 */
+/* 增加下边框 */
+  background-color: transparent; /* 使背景透明 */
+  outline: none; /* 移除焦点时的外边框 */
+}
+.input-field:focus {
+  border-bottom: 1px solid #676767; /* 获得焦点时下边框颜色变化 */
+}
+
+.profile-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.avatar-image {
+  width: 250px;
+  height: 250px;
+  /* border-radius: 50%; */
+  margin-bottom: 10px;
+}
+
+.logout-button {
+  align-self: flex-start; /* 按钮靠左 */
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  background-color: #f44336;
+  color: white;
+  cursor: pointer;
+  margin-bottom: 10px; /* 在底部留出空间 */
+}
+
+.logout-button:hover {
+  background-color: #d32f2f;
+}
+
+.data-visualization {
+  flex-grow: 2;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+  overflow-y: auto;
+}
+
+.data-visualization h2 {
+  margin-bottom: 20px;
+}
+
+.charts {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}

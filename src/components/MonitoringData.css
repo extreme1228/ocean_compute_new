@@ -1,0 +1,87 @@
+.monitoring-data-container {
+    display: flex;
+  }
+  
+  .data-panel {
+    width: 30%;
+    padding: 20px;
+    background-color: #f7f7f7;
+    border-left: 1px solid #ddd;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-left: auto; /* 使数据面板靠右对齐 */
+  }
+  
+  .data-content {
+    height: 100vh;
+    overflow-y: auto;
+  }
+  
+  .data-panel h3 {
+    margin-bottom: 20px;
+    font-size: 1.5em;
+    color: #333;
+  }
+  
+  .date-picker, .delete-date-picker {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  
+  .date-picker .react-datepicker-wrapper,
+  .delete-date-picker .react-datepicker-wrapper {
+    width: 45%;
+  }
+  
+  .charts {
+    margin-bottom: 20px;
+  }
+  
+  .chart-container {
+    margin-bottom: 20px;
+  }
+  
+  .data-panel label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 1em;
+    color: #555;
+  }
+  
+  .data-panel input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  .data-panel button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1em;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  
+  .data-panel button:hover {
+    background-color: #45a049;
+  }
+  
+  .delete-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    margin-top: 10px;
+    margin-bottom: 20px;
+  }
+  
