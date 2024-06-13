@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
 import { useNavigate } from 'react-router-dom';
 import './Home.css';
 import defaultAvatar from '../assets/data-report.jpg';
@@ -40,23 +40,6 @@ function Home() {
     logout();
     navigate('/login', { replace: true });
   };
-
-  const lineData = [
-    { name: 'June 1', value: 12 },
-    { name: 'June 2', value: 19 },
-    { name: 'June 3', value: 3 },
-    { name: 'June 4', value: 5 },
-    { name: 'June 5', value: 2 },
-  ];
-
-  const pieData = [
-    { name: 'Category A', value: 400 },
-    { name: 'Category B', value: 300 },
-    { name: 'Category C', value: 300 },
-    { name: 'Category D', value: 200 },
-  ];
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
   return (
     <div className="home-container">
@@ -99,40 +82,6 @@ function Home() {
           </div>
         </div>
         
-      </div>
-      <div className="data-visualization">
-        <h2>最近的海洋数据</h2>
-        <div className="charts">
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={lineData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="value" stroke="#8884d8" activeDot={{ r: 8 }} />
-            </LineChart>
-          </ResponsiveContainer>
-          <ResponsiveContainer width="100%" height={400}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
       </div>
     </div>
   );

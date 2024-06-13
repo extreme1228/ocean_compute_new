@@ -1,26 +1,31 @@
-import React, { useState , useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './UserManagement.css';
 import Modal from 'react-modal';
+import axios from 'axios';
 import { isAdmin } from '../services/authService'; 
 
-const initialUsers = [
-  { id: 1, username: 'user1', password: 'password1', email: 'user1@example.com', role: 'User' },
-  { id: 2, username: 'user2', password: 'password2', email: 'user2@example.com', role: 'Admin' },
-  // 其他用户数据...
-];
-
 const UserManagement = () => {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ username: '', password: '', email: '', role: '' });
+  const [newUser, setNewUser] = useState({ username: '', password: '', user_type: '', contact_info: '' });
   const [isAuthorized, setIsAuthorized] = useState(false);
-
 
   useEffect(() => {
     setIsAuthorized(isAdmin()); // 检查用户是否有管理员权限
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get('http://localhost:3010/users');
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
   const openDetailModal = (user) => {
     setSelectedUser(user);
     setIsDetailModalOpen(true);
@@ -43,19 +48,30 @@ const UserManagement = () => {
     setNewUser({ ...newUser, [name]: value });
   };
 
-  const handleAddUser = () => {
-    if (newUser.username && newUser.password && newUser.email && newUser.role) {
-      const newUserEntry = { ...newUser, id: users.length + 1 };
-      setUsers([...users, newUserEntry]);
-      setNewUser({ username: '', password: '', email: '', role: '' });
-      setIsAddUserModalOpen(false);
+  const handleAddUser = async () => {
+    if (newUser.username && newUser.password) {
+      try {
+        const response = await axios.post('http://localhost:3010/users', newUser);
+        const newUserEntry = { ...newUser, id: response.data.id };
+        setUsers([...users, newUserEntry]);
+        setNewUser({ username: '', password: '', user_type: '', contact_info: '' });
+        setIsAddUserModalOpen(false);
+        fetchUsers(); 
+      } catch (error) {
+        console.error('Error adding user:', error);
+      }
     } else {
       alert('Please fill in all fields.');
     }
   };
 
-  const handleDeleteUser = (id) => {
-    setUsers(users.filter(user => user.id !== id));
+  const handleDeleteUser = async (id) => {
+    try {
+      await axios.delete(`http://localhost:3010/users/${id}`);
+      setUsers(users.filter(user => user.User_ID !== id));
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    }
   };
 
   if (!isAuthorized) {
@@ -68,18 +84,20 @@ const UserManagement = () => {
       </div>
     );
   }
+
   return (
     <div className="user-management-container">
       <h2>User Management</h2>
       <button onClick={openAddUserModal} className="add-user-button">Add User</button>
       <div className="user-list">
         {users.map(user => (
-          <div key={user.id} className="user-item">
+          <div key={user.User_ID} className="user-item">
             <div className="user-info">
-              <p>Username: {user.username}</p>
-              <p>Email: {user.email}</p>
+              <p>Username: {user.Username}</p>
+              <p>Password: {user.Password}</p>
+              <p>Email: {user.Contact_Info}</p>
               <button onClick={() => openDetailModal(user)} className="view-details-button">View Details</button>
-              <button onClick={() => handleDeleteUser(user.id)} className="delete-button">Delete</button>
+              <button onClick={() => handleDeleteUser(user.User_ID)} className="delete-button">Delete</button>
             </div>
           </div>
         ))}
@@ -93,9 +111,10 @@ const UserManagement = () => {
           overlayClassName="modal-overlay"
         >
           <h2>User Details</h2>
-          <p>Username: {selectedUser.username}</p>
-          <p>Email: {selectedUser.email}</p>
-          <p>Role: {selectedUser.role}</p>
+          <p>Username: {selectedUser.Username}</p>
+          <p>Password: {selectedUser.Password}</p>
+          <p>Email: {selectedUser.Contact_Info}</p>
+          <p>Role: {selectedUser.User_Type}</p>
           <button onClick={closeDetailModal} className="close-button">Close</button>
         </Modal>
       )}
@@ -118,11 +137,11 @@ const UserManagement = () => {
           </label>
           <label>
             Email:
-            <input type="email" name="email" value={newUser.email} onChange={handleInputChange} />
+            <input type="email" name="contact_info" value={newUser.contact_info} onChange={handleInputChange} />
           </label>
           <label>
             Role:
-            <input type="text" name="role" value={newUser.role} onChange={handleInputChange} />
+            <input type="text" name="user_type" value={newUser.user_type} onChange={handleInputChange} />
           </label>
           <div className="modal-buttons">
             <button type="button" onClick={handleAddUser} className="confirm-button">Add User</button>

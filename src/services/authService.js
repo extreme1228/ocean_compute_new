@@ -1,34 +1,31 @@
-export const getCurrentUser = () => {
-  // 模拟从存储中获取当前用户信息
-  return JSON.parse(localStorage.getItem('currentUser'));
-};
+import axios from 'axios';
+
+const API_URL = 'http://localhost:3010'; // 后端服务器的URL
+
 
 export const isAdmin = () => {
-  const user = getCurrentUser();
-  return true || user && user.role === 'Admin';
+  const user_id = localStorage.getItem('user_id')
+  return user_id === '1';
 };
 
+
+
 export const authService = {
-    async login(username, password) {
-      // 模拟登录
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (username === 'a' && password === 'a') {
-            resolve();
-          } else {
-            reject();
-          }
-        }, 1000);
-      });
-    },
-    register: async (username, password) => {
-      // 模拟注册请求，实际项目中会发送请求到服务器
-      if (username && password) {
-        // 模拟一个成功的注册请求
-        return Promise.resolve();
-      } else {
-        return Promise.reject('Registration failed');
-      }
+  login: async (username, password) => {
+    try {
+      const response = await axios.post(`${API_URL}/login`, { username, password });
+      return response.data;
+    } catch (error) {
+      throw new Error('Login failed');
     }
-  };
-  
+  },
+  register: async (username, password) => {
+    try {
+      const response = await axios.post(`${API_URL}/register`, { username, password });
+      return response.data;
+    } catch (error) {
+      console.log("lbw-debug",error)
+      throw new Error('Registration failed');
+    }
+  }
+};

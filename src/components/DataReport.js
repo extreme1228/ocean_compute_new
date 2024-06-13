@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { DatePicker } from 'antd';
 import moment from 'moment';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import L from 'leaflet';
+import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import 'antd/dist/reset.css';
 import './DataReport.css';
@@ -15,18 +16,6 @@ const templates = [
   // 添加更多模板
 ];
 
-const initialStations = [
-  { id: 1, name: 'Station 1', lat: 37.7749, lon: -122.4194 },
-  { id: 2, name: 'Station 2', lat: 34.0522, lon: -118.2437 },
-  // 其他站点数据...
-];
-
-const initialData = [
-  { Data_ID: 1, Station_ID: 1, Timestamp: '2024-06-01T12:00:00', Temperature: 20.5, Salinity: 35.1, pH: 7.5, Pollutant: 'None', Concentration: 0 },
-  { Data_ID: 2, Station_ID: 1, Timestamp: '2024-06-02T12:00:00', Temperature: 21.0, Salinity: 35.0, pH: 7.6, Pollutant: 'Oil', Concentration: 0.5 },
-  // 其他监测数据...
-];
-
 const customIcon = new L.Icon({
   iconUrl: require('../assets/marker-icon.png'),
   iconSize: [25, 41],
@@ -35,8 +24,9 @@ const customIcon = new L.Icon({
 });
 
 const DataReport = () => {
-  const [stations] = useState(initialStations);
-  const [data] = useState(initialData);
+  const [stations, setStations] = useState([]);
+  const [data, setData] = useState([]);
+  const [pollutantData, setPollutantData] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [reportContent, setReportContent] = useState('');
@@ -44,8 +34,49 @@ const DataReport = () => {
   const [startDate, setStartDate] = useState(moment().startOf('month'));
   const [endDate, setEndDate] = useState(moment().endOf('month'));
 
+  useEffect(() => {
+    fetchStations();
+  }, []);
+
+  const fetchStations = async () => {
+    try {
+      const userId = localStorage.getItem('user_id'); // 从localStorage中获取user_id
+      const response = await axios.get(`http://localhost:3010/stations/${userId}`);
+      setStations(response.data);
+    } catch (error) {
+      console.error('Error fetching stations:', error);
+    }
+  };
+
+  const fetchData = async (stationId) => {
+    try {
+      const response = await axios.get(`http://localhost:3010/data/${stationId}`, {
+        params: { startDate: startDate.format('YYYY-MM-DD'), endDate: endDate.format('YYYY-MM-DD') }
+      });
+      setData(response.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  const fetchPollutantData = async (stationId) => {
+    try {
+      const response = await axios.get(`http://localhost:3010/pollutants/${stationId}`, {
+        params: {
+          startDate: startDate.format('YYYY-MM-DD'),
+          endDate: endDate.format('YYYY-MM-DD')
+        }
+      });
+      setPollutantData(response.data);
+    } catch (error) {
+      console.error('Error fetching pollutant data:', error);
+    }
+  };
+
   const handleStationClick = (station) => {
     setSelectedStation(station);
+    fetchData(station.id);
+    fetchPollutantData(station.id);
   };
 
   const handleTemplateChange = (e) => {
@@ -58,7 +89,11 @@ const DataReport = () => {
   };
 
   const generatePreview = () => {
-    setPreview(`Report for ${selectedStation.name} based on ${selectedTemplate.name}\n\n${reportContent}`);
+    const filteredData = filterData();
+    const filteredPollutantData = filterPollutantData();
+    const dataContent = filteredData.map(d => `Date: ${d.Timestamp}, Temperature: ${d.Temperature}, Salinity: ${d.Salinity}, pH: ${d.pH}`).join('\n');
+    const pollutantContent = filteredPollutantData.map(d => `Date: ${d.Timestamp}, Pollutant: ${d.Pollutant_Type}, Concentration: ${d.Concentration}`).join('\n');
+    setPreview(`Report for ${selectedStation.name} based on ${selectedTemplate.name}\n\n${reportContent}\n\nData:\n${dataContent}\n\nPollutant Data:\n${pollutantContent}`);
   };
 
   const exportToPDF = () => {
@@ -75,9 +110,14 @@ const DataReport = () => {
   };
 
   const filterData = () => {
-    return data.filter(d => 
-      d.Station_ID === selectedStation?.id && 
-      moment(d.Timestamp).isBetween(startDate, endDate)
+    return data.filter(d =>
+      moment(d.Timestamp).isBetween(startDate, endDate, undefined, '[]')
+    );
+  };
+
+  const filterPollutantData = () => {
+    return pollutantData.filter(d =>
+      moment(d.Timestamp).isBetween(startDate, endDate, undefined, '[]')
     );
   };
 
@@ -143,9 +183,9 @@ const DataReport = () => {
                   <h3>Report Preview</h3>
                   <pre>{preview}</pre>
                   <div className="export-buttons">
-                  <button onClick={exportToPDF} style={{ marginRight: '10px' }}>Export to PDF</button>
-                  <button onClick={exportToExcel} style={{ marginLeft: '10px' }}>Export to Excel</button>
-                </div>
+                    <button onClick={exportToPDF} style={{ marginRight: '10px' }}>Export to PDF</button>
+                    <button onClick={exportToExcel} style={{ marginLeft: '10px' }}>Export to Excel</button>
+                  </div>
                 </div>
               )}
             </>

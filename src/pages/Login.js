@@ -8,12 +8,18 @@ function Login({ setIsLoggedIn }) {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
+   const handleLogin = async () => {
     try {
-      await authService.login(username, password);
-      login();
-      setIsLoggedIn(true); // 更新状态
-      navigate('/dashboard', { replace: true }); // 使用 replace 参数
+      const response = await authService.login(username, password);
+      if (response.success) {
+        login();
+        setIsLoggedIn(true);
+        console.log(response.userId)
+        localStorage.setItem('user_id', response.userId); // 存储 user_id 到 localStorage
+        navigate('/dashboard', { replace: true });
+      } else {
+        alert(response.message);
+      }
     } catch (error) {
       alert('Login failed!');
     }

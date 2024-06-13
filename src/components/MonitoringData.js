@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import './MonitoringData.css';
 import { Line } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
 import 'chartjs-adapter-moment';
-import 'react-datepicker/dist/react-datepicker.css';
 import { DatePicker } from 'antd';
 import 'antd/dist/reset.css';
+import moment from 'moment';
 
 Chart.register(...registerables);
 
@@ -20,38 +21,72 @@ const customIcon = new L.Icon({
   popupAnchor: [1, -34],
 });
 
-// 初始站点数据
-const initialStations = [
-  { id: 1, name: 'Station test', lat: 37.7749, lon: -122.4194 },
-  { id: 2, name: 'Station debug', lat: 34.0522, lon: -118.2437 },
-  // 其他站点数据...
-];
-
-// 初始监测数据
-const initialData = [
-  { Data_ID: 1, Station_ID: 1, Timestamp: '2024-06-01T12:00:00', Temperature: 20.5, Salinity: 35.1, pH: '7.5' },
-  { Data_ID: 2, Station_ID: 1, Timestamp: '2024-06-02T12:00:00', Temperature: 21.0, Salinity: 35.0, pH: '7.6' },
-  { Data_ID: 3, Station_ID: 1, Timestamp: '2024-06-12T12:00:00', Temperature: 36.2, Salinity: 21.7, pH: '8.1' },
-  // 其他监测数据...
-];
+const initialStations = [];
 
 const getMonthStartEndDates = () => {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const start = moment().startOf('month');
+  const end = moment().endOf('month');
   return { start, end };
 };
 
 function MonitoringData() {
   const [stations, setStations] = useState(initialStations);
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [deleteStartDate, setDeleteStartDate] = useState(new Date());
-  const [deleteEndDate, setDeleteEndDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(moment());
+  const [endDate, setEndDate] = useState(moment());
+  const [deleteStartDate, setDeleteStartDate] = useState(moment());
+  const [deleteEndDate, setDeleteEndDate] = useState(moment());
   const [selectedDataId, setSelectedDataId] = useState(null);
   const [newData, setNewData] = useState({ Station_ID: '', Timestamp: '', Temperature: '', Salinity: '', pH: '', notes: '' });
+
+  useEffect(() => {
+    fetchStations();
+  }, []);
+
+  const fetchStations = async () => {
+    try {
+      const userId = localStorage.getItem('user_id'); // 从localStorage中获取user_id
+      const response = await axios.get(`http://localhost:3010/stations/${userId}`);
+      setStations(response.data);
+    } catch (error) {
+      console.error('Error fetching stations:', error);
+    }
+  };
+
+  const fetchStationData = async (stationId) => {
+    try {
+      const response = await axios.get(`http://localhost:3010/data/${stationId}`, {
+        params: {
+          startDate: startDate.format('YYYY-MM-DD'),
+          endDate: endDate.format('YYYY-MM-DD')
+        }
+      });
+      setData(response.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+
+  const addData = async (dataEntry) => {
+    try {
+      const response = await axios.post('http://localhost:3010/data', dataEntry);
+      setData([...data, { ...dataEntry, Data_ID: response.data.id }]);
+    } catch (error) {
+      console.error('Error adding data:', error);
+    }
+  };
+
+  const deleteData = async (dataId) => {
+    try {
+      await axios.delete(`http://localhost:3010/data/${dataId}`);
+      setData(data.filter(d => d.Data_ID !== dataId));
+    } catch (error) {
+      console.error('Error deleting data:', error);
+    }
+  };
 
   const handleStationClick = (station) => {
     const { start, end } = getMonthStartEndDates();
@@ -61,6 +96,7 @@ function MonitoringData() {
     setDeleteEndDate(end);
     setSelectedStation(station);
     setNewData({ ...newData, Station_ID: station.id });
+    fetchStationData(station.id);
   };
 
   const handleInputChange = (e) => {
@@ -69,13 +105,9 @@ function MonitoringData() {
   };
 
   const handleAddData = () => {
-    console.log("lbw-debug1")
     if (newData.Station_ID && newData.Timestamp && newData.Temperature && newData.Salinity && newData.pH) {
-      console.log("lbw-debug2")
-      const newDataEntry = { ...newData, Data_ID: data.length + 1 };
-      setData([...data, newDataEntry]);
+      addData(newData);
       setNewData({ Station_ID: selectedStation.id, Timestamp: '', Temperature: '', Salinity: '', pH: '', notes: '' });
-      console.log(data)
     } else {
       alert('Please fill in all fields.');
     }
@@ -83,26 +115,23 @@ function MonitoringData() {
 
   const handleDeleteData = () => {
     if (selectedDataId) {
-      setData(data.filter(d => d.Data_ID !== selectedDataId));
+      deleteData(selectedDataId);
       setSelectedDataId(null);
     }
   };
 
   const filteredData = data.filter(d =>
     d.Station_ID === selectedStation?.id &&
-    new Date(d.Timestamp) >= startDate &&
-    new Date(d.Timestamp) <= endDate
+    moment(d.Timestamp).isBetween(startDate, endDate, null, '[]')
   );
 
   const filteredDeleteData = data.filter(d =>
     d.Station_ID === selectedStation?.id &&
-    new Date(d.Timestamp) >= deleteStartDate &&
-    new Date(d.Timestamp) <= deleteEndDate
+    moment(d.Timestamp).isBetween(deleteStartDate, deleteEndDate, null, '[]')
   );
 
-  console.log(filteredData)
   const temperatureData = {
-    labels: filteredData.map(d => new Date(d.Timestamp).toLocaleDateString()),
+    labels: filteredData.map(d => moment(d.Timestamp).format('YYYY-MM-DD')),
     datasets: [
       {
         label: 'Temperature',
@@ -114,7 +143,7 @@ function MonitoringData() {
   };
 
   const salinityData = {
-    labels: filteredData.map(d => new Date(d.Timestamp).toLocaleDateString()),
+    labels: filteredData.map(d => moment(d.Timestamp).format('YYYY-MM-DD')),
     datasets: [
       {
         label: 'Salinity',
@@ -126,7 +155,7 @@ function MonitoringData() {
   };
 
   const phData = {
-    labels: filteredData.map(d => new Date(d.Timestamp).toLocaleDateString()),
+    labels: filteredData.map(d => moment(d.Timestamp).format('YYYY-MM-DD')),
     datasets: [
       {
         label: 'PH',
@@ -168,8 +197,8 @@ function MonitoringData() {
             <>
               <h3>Monitoring Data for {selectedStation.name}</h3>
               <div className="date-picker">
-                <DatePicker selected={startDate} onChange={date => setStartDate(date)} />
-                <DatePicker selected={endDate} onChange={date => setEndDate(date)} />
+                <DatePicker value={startDate} onChange={date => setStartDate(date)} />
+                <DatePicker value={endDate} onChange={date => setEndDate(date)} />
               </div>
               <div className="charts">
                 <div className="chart-container">
@@ -210,14 +239,14 @@ function MonitoringData() {
               <button onClick={handleAddData}>Add Data</button>
               <h3>Delete Data</h3>
               <div className="delete-date-picker">
-                <DatePicker selected={deleteStartDate} onChange={date => setDeleteStartDate(date)} />
-                <DatePicker selected={deleteEndDate} onChange={date => setDeleteEndDate(date)} />
+                <DatePicker value={deleteStartDate} onChange={date => setDeleteStartDate(date)} />
+                <DatePicker value={deleteEndDate} onChange={date => setDeleteEndDate(date)} />
               </div>
               <select className="delete-select" value={selectedDataId || ""} onChange={(e) => setSelectedDataId(parseInt(e.target.value))}>
                 <option value="">Select Data to Delete</option>
                 {filteredDeleteData.map(d => (
                   <option key={d.Data_ID} value={d.Data_ID}>
-                    {new Date(d.Timestamp).toLocaleDateString()} - Temp: {d.Temperature}, Sal: {d.Salinity}, pH: {d.pH}
+                    {moment(d.Timestamp).format('YYYY-MM-DD')} - Temp: {d.Temperature}, Sal: {d.Salinity}, pH: {d.pH}
                   </option>
                 ))}
               </select>

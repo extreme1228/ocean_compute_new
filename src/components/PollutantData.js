@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import './PollutantData.css';
 import { Bar } from 'react-chartjs-2';
@@ -10,6 +11,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import Modal from 'react-modal';
 import { DatePicker } from 'antd';
 import 'antd/dist/reset.css';
+import moment from 'moment';
 
 Chart.register(...registerables);
 
@@ -21,46 +23,79 @@ const customIcon = new L.Icon({
   popupAnchor: [1, -34],
 });
 
-// 初始站点数据
-const initialStations = [
-  { id: 1, name: 'Station test', lat: 37.7749, lon: -122.4194 },
-  { id: 2, name: 'Station debug', lat: 34.0522, lon: -118.2437 },
-  // 其他站点数据...
-];
-
-// 初始污染物数据
-const initialPollutantData = [
-  { Pollutant_Data_ID: 1, Station_ID: 1, Pollutant_Type: 'PM2.5', Concentration: 12.5, Safety_Threshold: 35.0, Timestamp: '2024-06-01T12:00:00' },
-  { Pollutant_Data_ID: 2, Station_ID: 1, Pollutant_Type: 'NO2', Concentration: 40.2, Safety_Threshold: 100.0, Timestamp: '2024-06-02T12:00:00' },
-  // 其他污染物数据...
-];
-
-
-
 const getMonthStartEndDates = () => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const now = moment();
+  const start = now.clone().startOf('month');
+  const end = now.clone().endOf('month');
   return { start, end };
 };
+
 // 设置 Modal 的根元素
 Modal.setAppElement('#root');
 
 const PollutantData = () => {
-  const [stations, setStations] = useState(initialStations);
-  const [pollutantData, setPollutantData] = useState(initialPollutantData);
+  const [stations, setStations] = useState([]);
+  const [pollutantData, setPollutantData] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(moment());
+  const [endDate, setEndDate] = useState(moment());
   const [newPollutantData, setNewPollutantData] = useState({ Station_ID: '', Pollutant_Type: '', Concentration: '', Safety_Threshold: '', Timestamp: '' });
   const [selectedPollutantDataId, setSelectedPollutantDataId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetchStations();
+  }, []);
+
+  const fetchStations = async () => {
+    try {
+      const userId = localStorage.getItem('user_id'); // 从localStorage中获取user_id
+      const response = await axios.get(`http://localhost:3010/stations/${userId}`);
+      setStations(response.data);
+    } catch (error) {
+      console.error('Error fetching stations:', error);
+    }
+  };
+
+  const fetchPollutantData = async (stationId) => {
+    try {
+      const response = await axios.get(`http://localhost:3010/pollutants/${stationId}`, {
+        params: {
+          startDate: startDate.format('YYYY-MM-DD'),
+          endDate: endDate.format('YYYY-MM-DD')
+        }
+      });
+      setPollutantData(response.data);
+    } catch (error) {
+      console.error('Error fetching pollutant data:', error);
+    }
+  };
+
+  const addPollutantData = async (data) => {
+    try {
+      const response = await axios.post('http://localhost:3010/pollutants', data);
+      setPollutantData([...pollutantData, { ...data, Pollutant_Data_ID: response.data.id }]);
+    } catch (error) {
+      console.error('Error adding pollutant data:', error);
+    }
+  };
+
+  const deletePollutantData = async (id) => {
+    try {
+      await axios.delete(`http://localhost:3010/pollutants/${id}`);
+      setPollutantData(pollutantData.filter(d => d.Pollutant_Data_ID !== id));
+    } catch (error) {
+      console.error('Error deleting pollutant data:', error);
+    }
+  };
 
   const handleStationClick = (station) => {
     const { start, end } = getMonthStartEndDates();
     setStartDate(start);
     setEndDate(end);
     setSelectedStation(station);
+    setNewPollutantData({ ...newPollutantData, Station_ID: station.id });
+    fetchPollutantData(station.id);
   };
 
   const handleInputChange = (e) => {
@@ -69,28 +104,25 @@ const PollutantData = () => {
   };
 
   const handleAddPollutantData = () => {
-    console.log(newPollutantData)
     if (newPollutantData.Station_ID && newPollutantData.Pollutant_Type && newPollutantData.Concentration && newPollutantData.Safety_Threshold && newPollutantData.Timestamp) {
       const newPollutantDataEntry = {
         ...newPollutantData,
-        Pollutant_Data_ID: pollutantData.length + 1,
         Station_ID: parseInt(newPollutantData.Station_ID, 10),
         Concentration: parseFloat(newPollutantData.Concentration),
-        Safety_Threshold: parseFloat(newPollutantData.Safety_Threshold)
+        Safety_Threshold: parseFloat(newPollutantData.Safety_Threshold),
+        Timestamp: moment(newPollutantData.Timestamp).format('YYYY-MM-DDTHH:mm:ss')
       };
-      setPollutantData([...pollutantData, newPollutantDataEntry]);
-      setNewPollutantData({ Station_ID: '', Pollutant_Type: '', Concentration: '', Safety_Threshold: '', Timestamp: '' });
+      addPollutantData(newPollutantDataEntry);
+      setNewPollutantData({ Station_ID: selectedStation.id, Pollutant_Type: '', Concentration: '', Safety_Threshold: '', Timestamp: '' });
       setIsModalOpen(false);
-      console.log(pollutantData);
     } else {
       alert('Please fill in all fields.');
     }
   };
 
-
   const handleDeletePollutantData = () => {
     if (selectedPollutantDataId) {
-      setPollutantData(pollutantData.filter(d => d.Pollutant_Data_ID !== selectedPollutantDataId));
+      deletePollutantData(selectedPollutantDataId);
       setSelectedPollutantDataId(null);
     }
   };
@@ -105,12 +137,11 @@ const PollutantData = () => {
 
   const filteredPollutantData = pollutantData.filter(d =>
     d.Station_ID === selectedStation?.id &&
-    new Date(d.Timestamp) >= startDate &&
-    new Date(d.Timestamp) <= endDate
+    moment(d.Timestamp).isBetween(startDate, endDate, null, '[]')
   );
-  console.log(filteredPollutantData)
+
   const pollutantChartData = {
-    labels: filteredPollutantData.map(d => new Date(d.Timestamp).toLocaleDateString()),
+    labels: filteredPollutantData.map(d => moment(d.Timestamp).format('YYYY-MM-DD')),
     datasets: [
       {
         label: 'Concentration',
@@ -155,68 +186,68 @@ const PollutantData = () => {
             <>
               <h3>Pollutant Data for {selectedStation.name}</h3>
               <div className="date-picker">
-                <DatePicker selected={startDate} onChange={date => setStartDate(date)} />
-                <DatePicker selected={endDate} onChange={date => setEndDate(date)} />
+                <DatePicker value={startDate} onChange={date => setStartDate(moment(date))} />
+                <DatePicker value={endDate} onChange={date => setEndDate(moment(date))} />
               </div>
               <div className="charts">
                 <Bar data={pollutantChartData} />
               </div>
               <div className="pollutant-data-list">
-              {filteredPollutantData.map(d => (
-                <div key={d.Pollutant_Data_ID} className="pollutant-data-item">
-                  <div className="pollutant-data-info">
-                    <p className="pollutant-type">Type: {d.Pollutant_Type}</p>
-                    <p className="pollutant-concentration">Concentration: <span>{d.Concentration}</span></p>
-                    <p className="pollutant-threshold">Threshold: <span>{d.Safety_Threshold}</span></p>
-                  </div>
-                  <button className="delete-button" onClick={() => setSelectedPollutantDataId(d.Pollutant_Data_ID)}>Delete</button>
-                  {selectedPollutantDataId === d.Pollutant_Data_ID && (
-                    <div className="confirmation-buttons">
-                      <button onClick={handleDeletePollutantData} className='confirm-delete-button'>Confirm Delete</button>
-                      <button onClick={() => setSelectedPollutantDataId(null)} className='cancel-delete-button'>Cancel</button>
+                {filteredPollutantData.map(d => (
+                  <div key={d.Pollutant_Data_ID} className="pollutant-data-item">
+                    <div className="pollutant-data-info">
+                      <p className="pollutant-type">Type: {d.Pollutant_Type}</p>
+                      <p className={`pollutant-concentration ${d.Concentration > d.Safety_Threshold ? 'exceeds-threshold' : 'within-threshold'}`}>
+                        Concentration: <span>{d.Concentration}</span>
+                      </p>
+                      <p className="pollutant-threshold">Threshold: <span>{d.Safety_Threshold}</span></p>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
+                    <button className="delete-button" onClick={() => setSelectedPollutantDataId(d.Pollutant_Data_ID)}>Delete</button>
+                    {selectedPollutantDataId === d.Pollutant_Data_ID && (
+                      <div className="confirmation-buttons">
+                        <button onClick={handleDeletePollutantData} className='confirm-delete-button'>Confirm Delete</button>
+                        <button onClick={() => setSelectedPollutantDataId(null)} className='cancel-delete-button'>Cancel</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
               <button onClick={handleOpenModal}>Add New Pollutant Data</button>
               <Modal
-              isOpen={isModalOpen}
-              onRequestClose={handleCloseModal}
-              contentLabel="Add Pollutant Data"
-              className="modal"
-              overlayClassName="modal-overlay"
-            >
-              <h2>Add New Pollutant Data</h2>
-              <form className="modal-form">
-                <label>
-                  Staion ID:
-                  <input type="text" name="Station_ID" value={newPollutantData.Station_ID} onChange={handleInputChange} />
-                </label>
-                <label>
-                  Pollutant Type:
-                  <input type="text" name="Pollutant_Type" value={newPollutantData.Pollutant_Type} onChange={handleInputChange} />
-                </label>
-                <label>
-                  Concentration:
-                  <input type="text" name="Concentration" value={newPollutantData.Concentration} onChange={handleInputChange} />
-                </label>
-                <label>
-                  Safety Threshold:
-                  <input type="text" name="Safety_Threshold" value={newPollutantData.Safety_Threshold} onChange={handleInputChange} />
-                </label>
-                <label>
-                  Timestamp:
-                  <input type="datetime-local" name="Timestamp" value={newPollutantData.Timestamp} onChange={handleInputChange} />
-                </label>
-                <div className="modal-buttons">
-                  <button type="button" onClick={handleAddPollutantData}>Add Data</button>
-                  <button type="button" onClick={handleCloseModal}>Close</button>
-                </div>
-              </form>
-            </Modal>
-             
+                isOpen={isModalOpen}
+                onRequestClose={handleCloseModal}
+                contentLabel="Add Pollutant Data"
+                className="modal"
+                overlayClassName="modal-overlay"
+              >
+                <h2>Add New Pollutant Data</h2>
+                <form className="modal-form">
+                  <label>
+                    Station ID:
+                    <input type="text" name="Station_ID" value={newPollutantData.Station_ID} onChange={handleInputChange} readOnly />
+                  </label>
+                  <label>
+                    Pollutant Type:
+                    <input type="text" name="Pollutant_Type" value={newPollutantData.Pollutant_Type} onChange={handleInputChange} />
+                  </label>
+                  <label>
+                    Concentration:
+                    <input type="text" name="Concentration" value={newPollutantData.Concentration} onChange={handleInputChange} />
+                  </label>
+                  <label>
+                    Safety Threshold:
+                    <input type="text" name="Safety_Threshold" value={newPollutantData.Safety_Threshold} onChange={handleInputChange} />
+                  </label>
+                  <label>
+                    Timestamp:
+                    <input type="datetime-local" name="Timestamp" value={newPollutantData.Timestamp} onChange={handleInputChange} />
+                  </label>
+                  <div className="modal-buttons">
+                    <button type="button" onClick={handleAddPollutantData}>Add Data</button>
+                    <button type="button" onClick={handleCloseModal}>Close</button>
+                  </div>
+                </form>
+              </Modal>
             </>
           )}
         </div>

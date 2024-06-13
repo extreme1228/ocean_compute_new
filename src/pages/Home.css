@@ -1,13 +1,13 @@
 .home-container {
   display: flex;
   padding: 20px;
-  padding-left: 100px; /* 调整左侧留出空间 */
+  padding-left: 250px; /* 调整左侧留出空间 */
 }
 
 .profile-section {
   display: flex;
   flex-direction: column;
-  margin-right: 50px; /* 在右侧留出空间 */
+  margin-right: 200px; /* 在右侧留出空间 */
 }
 
 .profile-card {
@@ -17,7 +17,8 @@
   padding: 20px;
   border: 1px solid #ddd;
   border-radius: 8px;
-  width: 600px;
+  width: 1000px;
+  height: 700px;
   background-color: #f9f9f9;
   margin-bottom: 20px; /* 在底部留出空间 */
 }
@@ -50,8 +51,8 @@
 }
 
 .avatar-image {
-  width: 250px;
-  height: 250px;
+  width: 350px;
+  height: 350px;
   /* border-radius: 50%; */
   margin-bottom: 10px;
 }
@@ -71,21 +72,3 @@
   background-color: #d32f2f;
 }
 
-.data-visualization {
-  flex-grow: 2;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #fff;
-  overflow-y: auto;
-}
-
-.data-visualization h2 {
-  margin-bottom: 20px;
-}
-
-.charts {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}

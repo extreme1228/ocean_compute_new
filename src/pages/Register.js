@@ -9,16 +9,29 @@ function Register() {
   const navigate = useNavigate();
 
   const handleRegister = async () => {
+    // 账号密码验证
+    if (username === '' || password === '') {
+      alert('Username and password cannot be empty!');
+      return;
+    }
+    if (/[\x00-\x1F\x7F]/.test(username) || /[\x00-\x1F\x7F]/.test(password)) {
+      alert('Username and password cannot contain non-printable ASCII characters!');
+      return;
+    }
+    if (username.length > 20 || password.length > 20) {
+      alert('Username and password cannot exceed 20 characters!');
+      return;
+    }
     if (password !== confirmPassword) {
       alert('Passwords do not match!');
       return;
     }
     try {
-      await authService.register(username, password);
+      const response = await authService.register(username, password);
       alert('Registration successful!');
       navigate('/login', { replace: true });
     } catch (error) {
-      alert('Registration failed!');
+      alert('Registration failed!', error);
     }
   };
 
@@ -29,11 +42,11 @@ function Register() {
   return (
     <div style={styles.container}>
       <div style={styles.registerForm}>
+        <button onClick={handleBackToLogin} style={styles.backButton}>
+          &#8592; {/* Unicode 箭头符号 */}
+        </button>
         <div style={styles.header}>
-          <button onClick={handleBackToLogin} style={styles.backButton}>
-            &#8592; {/* Unicode 箭头符号 */}
-          </button>
-          <h2 style={styles.title}>注册 - 海洋环境监测平台</h2>
+          <h2 style={styles.title}>用户注册</h2>
         </div>
         <input
           type="text"
@@ -81,22 +94,28 @@ const styles = {
     borderRadius: '10px',
     backgroundColor: 'white',
     boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+    position: 'relative', // 添加相对定位
   },
   header: {
     display: 'flex',
+    justifyContent: 'center', // 居中对齐
     alignItems: 'center',
     width: '100%',
     marginBottom: '20px',
   },
   backButton: {
+    position: 'absolute', // 绝对定位
+    top: '10px',
+    left: '10px',
     background: 'none',
     border: 'none',
     fontSize: '24px',
     cursor: 'pointer',
-    marginRight: '10px',
+    color: 'black',
   },
   title: {
-    margin: 0,
+    margin: '0 auto', // 居中对齐
+    padding: '0',
     fontSize: '24px',
   },
   inputField: {
